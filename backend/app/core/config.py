@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "CodeQuest"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
-    
+    GITHUB_TOKEN: str = ""
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000

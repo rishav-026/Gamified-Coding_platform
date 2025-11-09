@@ -1,41 +1,25 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends
+from app.services.github_service import GitHubService
 from pydantic import BaseModel
 
-class GitHubCallbackRequest(BaseModel):
-    code: str
-
 router = APIRouter(prefix="/github", tags=["github"])
+github_service = GitHubService()
 
-@router.post("/callback")
-async def github_callback(callback_req: GitHubCallbackRequest):
-    """GitHub OAuth callback"""
-    try:
-        # Placeholder for GitHub OAuth
-        return {
-            "status": "GitHub integration coming soon",
-            "code_received": callback_req.code
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+class GitHubRequest(BaseModel):
+    github_username: str
+    repo_name: str
 
-@router.get("/repos/{username}")
-async def get_user_repos(username: str):
-    """Get user repositories from GitHub"""
-    try:
-        return {
-            "repositories": [],
-            "message": "GitHub API integration coming soon"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@router.post("/profile")
+async def github_profile(req: GitHubRequest):
+    result = await github_service.get_user_profile(req.github_username)
+    return result
 
-@router.get("/pulls/{owner}/{repo}")
-async def get_repo_pulls(owner: str, repo: str):
-    """Get pull requests from repository"""
-    try:
-        return {
-            "pulls": [],
-            "message": "GitHub API integration coming soon"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@router.post("/track_commits")
+async def github_commits(req: GitHubRequest):
+    result = await github_service.count_recent_commits(req.github_username, req.repo_name)
+    return result
+
+@router.post("/track_prs")
+async def github_prs(req: GitHubRequest):
+    result = await github_service.count_pull_requests(req.github_username, req.repo_name)
+    return result

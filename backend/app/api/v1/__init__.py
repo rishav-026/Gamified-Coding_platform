@@ -11,7 +11,8 @@ from app.api.v1 import (
     github,
     notifications,
     submissions,
-    achievements
+    achievements,
+    tutorials
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -29,5 +30,6 @@ router.include_router(github.router)
 router.include_router(notifications.router)
 router.include_router(submissions.router)
 router.include_router(achievements.router)
+router.include_router(tutorials.router)
 
 __all__ = ["router"]

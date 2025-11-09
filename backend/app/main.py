@@ -3,11 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.api.v1 import ai
+from app.api.v1 import github
+from app.api.v1 import tutorials
+
 
 from app.core.database import db_client
 from app.api.v1 import router as api_router
 from app.utils.json_encoder import MongoJSONEncoder
 import json
+
 
 # Lifespan context manager
 @asynccontextmanager
@@ -57,6 +61,9 @@ app.add_middleware(
 # Include routers
 app.include_router(api_router)
 app.include_router(ai.router)
+app.include_router(github.router)
+app.include_router(tutorials.router)
+
 
 
 # Health check

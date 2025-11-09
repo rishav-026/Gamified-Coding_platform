@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import GitHubTutorials from './pages/GitHubTutorials';
+
 import { router } from './router'
 import './styles/index.css'
 

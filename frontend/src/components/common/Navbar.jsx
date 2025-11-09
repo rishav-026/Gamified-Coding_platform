@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaBars, FaTimes, FaUser, FaSignOutAlt, FaCog } from 'react-icons/fa';
+import { FaBars, FaTimes, FaUser, FaSignOutAlt, FaGithub } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
+
+
+
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,6 +26,8 @@ const Navbar = () => {
     { path: '/leaderboard', label: 'Leaderboard', authenticated: true },
     { path: '/ai-chat', label: '🤖 AI Chat', authenticated: true },
     { path: '/analytics', label: 'Analytics', authenticated: true },
+     { path: '/github', label: <><FaGithub className="inline mr-1" /> GitHub</>, authenticated: true }, // ✅ added
+     { path: '/tutorials', label: '📚 Tutorials', authenticated: true },
   ];
 
   return (
