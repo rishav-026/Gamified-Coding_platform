@@ -37,6 +37,12 @@ def get_xp_for_level(level: int) -> int:
         return 0
     return (level - 1) * 1000
 
+def get_level_info(total_xp: int) -> dict:
+    progress_data = get_xp_progress(total_xp)
+    progress_data["rank_name"] = get_level_name(progress_data["current_level"])
+    return progress_data
+
+
 
 def get_xp_progress(total_xp: int) -> dict:
     """
@@ -77,6 +83,7 @@ def get_xp_progress(total_xp: int) -> dict:
     }
 
 
+
 def get_level_name(level: int) -> str:
     """Get rank name for level"""
     if level < 5:
@@ -91,3 +98,5 @@ def get_level_name(level: int) -> str:
         return "Master"
     else:
         return "Legendary"
+    
+    

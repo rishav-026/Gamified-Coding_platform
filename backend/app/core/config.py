@@ -26,8 +26,11 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str = ""
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/github/callback"
     
-    # OpenAI
-    OPENAI_API_KEY: str = ""
+    # Gemini_API_Key
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str | None = "models/gemini-2.5-flash-lite-preview-09-2025"
+    GEMINI_MAX_TOKENS: int | None = 1000
+    GEMINI_TEMPERATURE: float | None = 0.7
     
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"]

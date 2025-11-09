@@ -21,6 +21,7 @@ const Navbar = () => {
     { path: '/dashboard', label: 'Dashboard', authenticated: true },
     { path: '/quests', label: 'Quests', authenticated: true },
     { path: '/leaderboard', label: 'Leaderboard', authenticated: true },
+    { path: '/ai-chat', label: '🤖 AI Chat', authenticated: true },
     { path: '/analytics', label: 'Analytics', authenticated: true },
   ];
 

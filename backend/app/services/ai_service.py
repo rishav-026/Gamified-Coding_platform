@@ -1,160 +1,266 @@
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from bson import ObjectId
-from datetime import datetime
+"""
+AI Chat Service - Powered by Google Gemini
+Handles AI conversations, code explanations, and hints
+"""
+
 import os
+import json
+from datetime import datetime
+import google.generativeai as genai
+from app.core.config import settings
+
+# Configure Gemini API
+genai.configure(api_key=settings.GEMINI_API_KEY)
 
 class AIService:
-    def __init__(self, db: AsyncIOMotorDatabase):
-        self.db = db
-        self.chat_history_collection = db["chat_history"]
-        self.code_reviews_collection = db["code_reviews"]
-        self.tasks_collection = db["tasks"]
-
-    async def chat(self, user_id: str, message: str, context: dict = None) -> dict:
-        """Process chat message with AI"""
+    """Handle AI chat interactions using Google Gemini"""
+    
+    def __init__(self):
+        """Initialize AI service with Gemini model"""
+        self.model_name = os.getenv("GEMINI_MODEL", "models/gemini-2.5-flash-lite-preview-09-2025")
+        self.max_tokens = int(os.getenv("GEMINI_MAX_TOKENS", "1000"))
+        self.temperature = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+        
+        # Initialize the model
+        self.model = genai.GenerativeModel(self.model_name)
+        
+        # Store conversation history
+        self.conversation_history = []
+        
+        print(f"✅ Gemini AI Service initialized with model: {self.model_name}")
+    
+    async def chat(self, user_message: str, user_id: str, context: str = "") -> dict:
+        """
+        Chat with AI assistant using Gemini
+        
+        Args:
+            user_message (str): The user's question/message
+            user_id (str): ID of the user asking
+            context (str): Additional context (topic, problem details)
+        
+        Returns:
+            dict: Response from AI
+        """
         try:
-            # Store chat message
-            chat_entry = {
-                "user_id": user_id,
-                "role": "user",
-                "content": message,
-                "context": context,
-                "created_at": datetime.utcnow(),
-            }
-            
-            await self.chat_history_collection.insert_one(chat_entry)
-            
-            # For now, return mock AI response
-            # In production, integrate with OpenAI API
-            ai_response = self._generate_response(message, context)
-            
-            # Store AI response
-            response_entry = {
-                "user_id": user_id,
-                "role": "assistant",
-                "content": ai_response,
-                "created_at": datetime.utcnow(),
-            }
-            
-            await self.chat_history_collection.insert_one(response_entry)
-            
-            return {
-                "message": ai_response,
-                "suggestions": self._get_suggestions(message),
-                "timestamp": datetime.utcnow()
-            }
-        except Exception as e:
-            raise ValueError(f"Error in chat: {str(e)}")
+            # Build the system prompt
+            system_prompt = """You are CodeQuest AI Assistant, a friendly and helpful coding tutor.
 
-    async def review_code(self, user_id: str, code: str, language: str, context: dict = None) -> dict:
-        """Review code with AI"""
-        try:
-            # Store code review
-            review = {
-                "user_id": user_id,
-                "code": code,
-                "language": language,
-                "context": context,
-                "created_at": datetime.utcnow(),
-            }
+Your responsibilities:
+1. Answer programming questions clearly and concisely
+2. Explain code concepts in simple terms
+3. Provide hints (NOT full solutions) for coding problems
+4. Encourage learning and problem-solving skills
+5. Be supportive and encouraging
+6. Format code examples with triple backticks (``````javascript, etc.)
+7. Keep responses under 500 words
+8. Ask clarifying questions if needed
+
+Teaching Philosophy:
+- Help users understand concepts, don't give answers
+- Guide them to discover solutions
+- Celebrate their learning journey
+- Make programming fun and accessible"""
             
-            result = await self.code_reviews_collection.insert_one(review)
+            # Add context if provided
+            if context:
+                system_prompt += f"\n\nCurrent Context: {context}"
             
-            # Generate code review feedback
-            feedback = self._analyze_code(code, language)
+            # Create the full prompt
+            full_prompt = f"{system_prompt}\n\nUser Question: {user_message}"
             
-            # Update review with feedback
-            await self.code_reviews_collection.update_one(
-                {"_id": result.inserted_id},
-                {"$set": {"feedback": feedback, "reviewed_at": datetime.utcnow()}}
+            # Generate response using Gemini
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=self.max_tokens,
+                    temperature=self.temperature,
+                )
             )
             
-            return feedback
-        except Exception as e:
-            raise ValueError(f"Error reviewing code: {str(e)}")
-
-    async def get_hint(self, user_id: str, task_id: str) -> dict:
-        """Get hint for task"""
-        try:
-            task = await self.tasks_collection.find_one({"_id": ObjectId(task_id)})
-            if not task:
-                raise ValueError("Task not found")
+            # Extract the AI response
+            ai_response = response.text
             
-            hints = task.get("hints", [])
-            if not hints:
-                return {"hint": "Think about breaking down the problem into smaller parts"}
+            # Estimate tokens (rough calculation)
+            tokens_used = len(user_message.split()) + len(ai_response.split())
             
-            return {"hint": hints[0]}
+            # Add to conversation history
+            self.conversation_history.append({
+                "role": "user",
+                "content": user_message,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": ai_response,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+            # Keep only last 10 exchanges (20 messages)
+            if len(self.conversation_history) > 20:
+                self.conversation_history = self.conversation_history[-20:]
+            
+            return {
+                "success": True,
+                "response": ai_response,
+                "timestamp": datetime.utcnow().isoformat(),
+                "tokens_used": tokens_used,
+                "user_id": user_id,
+                "model": self.model_name
+            }
+        
         except Exception as e:
-            raise ValueError(f"Error getting hint: {str(e)}")
-
-    async def get_chat_history(self, user_id: str, limit: int = 50) -> list:
-        """Get chat history for user"""
-        try:
-            messages = await self.chat_history_collection.find({
+            print(f"❌ Error in AI chat: {str(e)}")
+            return {
+                "success": False,
+                "response": "Sorry, I'm having trouble processing your request. Please try again.",
+                "error": str(e),
                 "user_id": user_id
-            }).sort("created_at", -1).limit(limit).to_list(limit)
+            }
+    
+    async def get_code_explanation(self, code: str, language: str = "python") -> str:
+        """
+        Explain a code snippet
+        
+        Args:
+            code (str): The code to explain
+            language (str): Programming language
+        
+        Returns:
+            str: Explanation of the code
+        """
+        try:
+            prompt = f"""Explain this {language} code in simple terms:
+
+
+Please provide:
+1. **What it does**: Brief description of the overall purpose
+2. **How it works**: Step-by-step explanation of the logic
+3. **Key concepts**: Important programming concepts used
+4. **Example**: Show how it would work with sample input/output
+
+Keep it concise and easy to understand for beginners."""
             
-            return [self._format_message(msg) for msg in messages]
+            response = self.model.generate_content(prompt)
+            return response.text
+        
         except Exception as e:
-            raise ValueError(f"Error fetching chat history: {str(e)}")
+            print(f"❌ Error explaining code: {str(e)}")
+            return f"Error explaining code: {str(e)}"
+    
+    async def generate_hint(self, problem_title: str, problem_description: str, difficulty: str = "beginner") -> str:
+        """
+        Generate a helpful hint for a coding problem
+        
+        Args:
+            problem_title (str): Title of the problem
+            problem_description (str): Full description of the problem
+            difficulty (str): Difficulty level
+        
+        Returns:
+            str: A helpful hint that doesn't give away the answer
+        """
+        try:
+            difficulty_guidance = {
+                "beginner": "Give a very basic hint about the approach",
+                "intermediate": "Mention the algorithm type but not specific implementation",
+                "advanced": "Suggest optimization techniques"
+            }
+            
+            guidance = difficulty_guidance.get(difficulty, "Give a helpful hint")
+            
+            prompt = f"""Generate a helpful hint for this {difficulty} coding problem.
+{guidance}
 
-    def _generate_response(self, message: str, context: dict = None) -> str:
-        """Generate AI response (mock for now)"""
-        # Simple keyword matching for mock responses
-        if "hello" in message.lower():
-            return "Hi! I'm your CodeQuest AI assistant. How can I help you with coding?"
-        elif "how" in message.lower():
-            return "I can help you with coding concepts, debugging, and learning. What would you like to know?"
-        elif "help" in message.lower():
-            return "I'm here to help! You can ask me about coding concepts, get code reviews, or ask for hints on tasks."
-        else:
-            return f"Thanks for asking about '{message}'. In production, I'll provide AI-powered responses using OpenAI's API."
+IMPORTANT: Do NOT give the full solution or code!
 
-    def _get_suggestions(self, message: str) -> list:
-        """Get follow-up suggestions"""
-        return [
-            "Can you explain this concept?",
-            "Show me an example",
-            "What's the best practice?"
-        ]
+Problem Title: {problem_title}
+Problem Description: {problem_description}
 
-    def _analyze_code(self, code: str, language: str) -> dict:
-        """Analyze code for review (mock for now)"""
-        lines = code.split('\n')
-        
-        correct = [
-            "Code structure is clean",
-            "Good variable naming"
-        ]
-        
-        warnings = []
-        improvements = []
-        
-        # Simple heuristic checks
-        if len(lines) < 3:
-            warnings.append("Code is very short - make sure it solves the problem")
-        
-        if "TODO" in code or "FIXME" in code:
-            warnings.append("Found TODO/FIXME comments")
-        
-        if "print" in code:
-            improvements.append("Consider using logging instead of print statements")
-        
-        if language == "python" and "import *" in code:
-            warnings.append("Avoid 'import *' statements")
-        
-        return {
-            "correct": correct,
-            "warnings": warnings,
-            "improvements": improvements,
-            "score": 75
-        }
+Provide:
+1. A hint about the approach to solve it
+2. Key concepts to think about
+3. A question to guide their thinking
+4. One small example if helpful
 
-    def _format_message(self, message: dict) -> dict:
-        """Format message response"""
-        return {
-            "role": message.get("role"),
-            "content": message.get("content"),
-            "timestamp": message.get("created_at")
-        }
+Keep the hint encouraging and educational."""
+            
+            response = self.model.generate_content(prompt)
+            return response.text
+        
+        except Exception as e:
+            print(f"❌ Error generating hint: {str(e)}")
+            return f"Error generating hint: {str(e)}"
+    
+    async def debug_code(self, code: str, error: str, language: str = "python") -> str:
+        """
+        Help debug code by explaining the error
+        
+        Args:
+            code (str): The buggy code
+            error (str): The error message
+            language (str): Programming language
+        
+        Returns:
+            str: Debugging advice
+        """
+        try:
+            prompt = f"""Help debug this {language} code:
+
+
+Error: {error}
+
+Please:
+1. Explain what went wrong
+2. Identify the root cause
+3. Suggest how to fix it
+4. Show corrected code
+5. Explain how to prevent this error
+
+Keep it educational and constructive."""
+            
+            response = self.model.generate_content(prompt)
+            return response.text
+        
+        except Exception as e:
+            print(f"❌ Error debugging code: {str(e)}")
+            return f"Error debugging: {str(e)}"
+    
+    async def learn_concept(self, concept: str, level: str = "beginner") -> str:
+        """
+        Teach a programming concept
+        
+        Args:
+            concept (str): The concept to learn (e.g., "recursion")
+            level (str): Learning level
+        
+        Returns:
+            str: Explanation with examples
+        """
+        try:
+            prompt = f"""Teach me about {concept} at the {level} level.
+
+Please include:
+1. **Simple Definition**: What is {concept}?
+2. **Why It Matters**: When and why use {concept}?
+3. **Key Points**: 3-4 important things to know
+4. **Code Example**: A simple, clear code example
+5. **Common Mistakes**: Things beginners often get wrong
+6. **Practice Tip**: How to practice this concept
+
+Make it engaging, clear, and not overwhelming."""
+            
+            response = self.model.generate_content(prompt)
+            return response.text
+        
+        except Exception as e:
+            print(f"❌ Error explaining concept: {str(e)}")
+            return f"Error explaining concept: {str(e)}"
+    
+    def clear_history(self):
+        """Clear conversation history"""
+        self.conversation_history = []
+        print("✅ Conversation history cleared")
+    
+    def get_history(self) -> list:
+        """Get conversation history"""
+        return self.conversation_history

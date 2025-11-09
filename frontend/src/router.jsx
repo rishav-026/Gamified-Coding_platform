@@ -12,6 +12,8 @@ import Leaderboard from './pages/Leaderboard';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
+import AIChat from './pages/AIChat';
+
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +24,12 @@ export const router = createBrowserRouter([
         path: '/',
         element: <Home />,
       },
+
+      {
+        path: '/ai-chat',
+        element: <ProtectedRoute><AIChat /></ProtectedRoute>,
+      },
+      
       {
         path: '/dashboard',
         element: (
@@ -62,6 +70,7 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      
       {
         path: '/profile',
         element: (
