@@ -4,6 +4,10 @@ import { RouterProvider } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import GitHubTutorials from './pages/GitHubTutorials';
+import QuestMap from './pages/QuestMap';
+import QuestDetail from './pages/QuestDetail';
+import GamificationStats from './pages/GamificationStats';
+
 
 import { router } from './router'
 import './styles/index.css'

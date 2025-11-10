@@ -15,6 +15,9 @@ import NotFound from './pages/NotFound';
 import AIChat from './pages/AIChat';
 import GitHubIntegration from "./pages/GitHubIntegration"; // ✅ Added this
 import GitHubTutorials from './pages/GitHubTutorials';
+import QuestMap from './pages/QuestMap';
+import GamificationStats from './pages/GamificationStats';
+
 
 
 export const router = createBrowserRouter([
@@ -81,6 +84,18 @@ export const router = createBrowserRouter([
             <Analytics />
           </ProtectedRoute>
         ),
+      },
+      {
+        path: '/quest-map',
+        element: <ProtectedRoute><QuestMap /></ProtectedRoute>,
+      },
+      {
+        path: '/quest/:questId',
+        element: <ProtectedRoute><QuestDetail /></ProtectedRoute>,
+      },
+      {
+        path: '/gamification-stats',
+        element: <ProtectedRoute><GamificationStats /></ProtectedRoute>,
       },
       {
         path: '/profile',

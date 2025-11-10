@@ -5,6 +5,8 @@ from app.core.config import settings
 from app.api.v1 import ai
 from app.api.v1 import github
 from app.api.v1 import tutorials
+from app.api.v1 import quests_system
+
 
 
 from app.core.database import db_client
@@ -63,6 +65,7 @@ app.include_router(api_router)
 app.include_router(ai.router)
 app.include_router(github.router)
 app.include_router(tutorials.router)
+app.include_router(quests_system.router)
 
 
 

@@ -12,7 +12,8 @@ from app.api.v1 import (
     notifications,
     submissions,
     achievements,
-    tutorials
+    tutorials,
+    quests_system  # ✅ Add this import
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -31,5 +32,6 @@ router.include_router(notifications.router)
 router.include_router(submissions.router)
 router.include_router(achievements.router)
 router.include_router(tutorials.router)
+router.include_router(quests_system.router)  # ✅ Add this line
 
 __all__ = ["router"]
